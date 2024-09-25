@@ -6,6 +6,7 @@ response_codes = {
     235: "Authorization Successful",
     250: "OK",
     251: "User Not Local",
+    252: "Cannot Verify User But Will Attempt Delivery",
     334: "Authorization Security Mechanism Accepted",
     354: "Start Mail Input (End With <CLRF>.<CLRF>)",
     421: "Service Not Available - Closing Transmission Channel",
@@ -43,8 +44,10 @@ response_codes = {
 
 # based on RFC 821 - there are now more commands which need to be added
 # SEND, SOML, SAML, RELAY, TURN and TLS are obsolete
-commands = [
-    "CONNECTION ESTABLISHMENT",
+
+# EXPN means Expand
+commands = (
+    # "CONNECTION ESTABLISHMENT",
     "HELO",
     "EHLO",
     "MAIL",
@@ -56,4 +59,4 @@ commands = [
     "HELP",
     "NOOP",
     "QUIT",
-]
+)
