@@ -46,6 +46,7 @@ response_codes = {
 # SEND, SOML, SAML, RELAY, TURN and TLS are obsolete
 
 # EXPN means Expand
+# NOOP is used to prevent timeout and ensure connection still present
 commands = (
     # "CONNECTION ESTABLISHMENT",
     "HELO",
@@ -59,4 +60,6 @@ commands = (
     "HELP",
     "NOOP",
     "QUIT",
+    "AUTH",
+    "STARTTLS",
 )

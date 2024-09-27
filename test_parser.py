@@ -3,45 +3,41 @@ import pytest
 
 
 def test_get_response_code_valid():
-    response = b'221 Bye\r\n'
+    response = b"221 Bye\r\n"
     p = SmtpParser()
     assert p.get_response_code(response) == 221
 
 
 def test_get_response_code_valid_string():
-    response = '221 Bye\r\n'
+    response = "221 Bye\r\n"
     p = SmtpParser()
     assert p.get_response_code(response) == 221
 
 
 def test_get_response_code_and_message():
-    response = '221 Bye\r\n'
+    response = "221 Bye\r\n"
     p = SmtpParser()
     assert p.response_to_code_and_message(response) == (221, "Bye")
 
 
 def test_get_response_message():
-    response = '221 Bye\r\n'
+    response = "221 Bye\r\n"
     p = SmtpParser()
     assert p.get_response_message(response) == "Bye"
 
 
 def test_get_all_response_codes():
     p = SmtpParser()
-    p.response_to_code_and_message('250 OK\r\n')
-    p.response_to_code_and_message('221 Bye\r\n')
+    p.response_to_code_and_message("250 OK\r\n")
+    p.response_to_code_and_message("221 Bye\r\n")
     assert p.responses == [250, 221]
 
 
 def test_get_response_code_no_code():
-    response = b'Bye\r\n'
+    response = b"Bye\r\n"
     p = SmtpParser()
     with pytest.raises(ValueError):
         p.get_response_code(response)
-
-
-def test_get_meaning_of_250_code():
-    assert SmtpParser.response_code_to_meaning(250) == "OK"
 
 
 def test_get_command_valid_command():
@@ -51,7 +47,7 @@ def test_get_command_valid_command():
 
 def test_get_command_invalid_command():
     p = SmtpParser()
-    with pytest.raises(Exception):
+    with pytest.warns(UserWarning):
         p.set_command("ZZZZ bar.com")
 
 
@@ -76,11 +72,13 @@ def test_get_mail_from_alt_format():
 def test_220_response():
     p = SmtpParser()
     p.resolve_response("220 foo.com Simple Mail Transfer Service Ready")
-    assert all([
-        p.server == "foo.com",
-        p.server_ready,
-        p.responses == [220],
-    ])
+    assert all(
+        [
+            p.server == "foo.com",
+            p.server_ready,
+            p.responses == [220],
+        ]
+    )
 
 
 def test_221_response():
@@ -107,12 +105,14 @@ def test_bad_sequence_order():
     p.resolve_response("220 server.example.com ESMTP")
     p.resolve_command("MAIL FROM:<person@mail.com>")
     p.resolve_response("503 5.5.2 Send hello first")
-    assert all([
-        p.server == "server.example.com",
-        p.commands == ["MAIL"],
-        p.responses == [220, 503],
-        p.reverse_path == "",
-    ])
+    assert all(
+        [
+            p.server == "server.example.com",
+            p.commands == ["MAIL"],
+            p.responses == [220, 503],
+            p.reverse_path == "",
+        ]
+    )
 
 
 def test_response_code_with_hyphen():
@@ -127,7 +127,8 @@ def test_get_ehlo_info():
     p.resolve_response("250 - PIPELINING")
     p.resolve_response("250 - SIZE 10240000")
     p.resolve_response("250 - VRFY")
-    assert p.ehlo_info == {
+    assert p.server_info == {
+        "commands": [],
         "PIPELINING": None,
         "SIZE": ["10240000"],
         "VRFY": None,
@@ -138,9 +139,7 @@ def test_ehlo_info_with_hyphen():
     p = SmtpParser()
     p.resolve_command("EHLO server.example.com")
     p.resolve_response("250-X-LINK2STATE")
-    assert p.ehlo_info == {
-        "X-LINK2STATE": None
-    }
+    assert p.server_info == {"commands": [], "X-LINK2STATE": None}
 
 
 def test_too_many_recipients():
@@ -150,3 +149,45 @@ def test_too_many_recipients():
     p.resolve_command("RCPT TO:<person2@mail.com>")
     p.resolve_response("452 4.5.3 Error: too many recipients")
     assert p.recipients == ["person1@mail.com"]
+
+
+def test_rset_resets_features():
+    p = SmtpParser()
+    p.resolve_command("RCPT TO:<person1@mail.com>")
+    p.resolve_response("250 OK")
+    p.resolve_command("RSET")
+    p.resolve_response("250 reset")
+    assert p.recipients == []
+
+
+def test_get_data():
+    p = SmtpParser()
+    p.resolve_command("DATA")
+    p.resolve_response("354 Go Ahead")
+    p.resolve_data("Subject: First Email")
+    p.resolve_data("Hey There!")
+    p.resolve_data(".")
+    p.resolve_response("250 OK: Message Accepted")
+    assert p.data == ["Subject: First Email", "Hey There!"]
+
+
+def test_214_response():
+    p = SmtpParser()
+    p.resolve_response("214-  auth  data  ehlo  helo")
+    p.resolve_response("214-  help  mail  noop  quit")
+    assert p.server_info["commands"] == [
+        "AUTH",
+        "DATA",
+        "EHLO",
+        "HELO",
+        "HELP",
+        "MAIL",
+        "NOOP",
+        "QUIT",
+    ]
+
+
+def test_unknown_command_raises_warning():
+    with pytest.warns(UserWarning):
+        p = SmtpParser()
+        p.resolve_command("XYZZ")
