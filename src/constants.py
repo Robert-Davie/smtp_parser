@@ -1,3 +1,5 @@
+"""constants from RFC5321"""
+
 response_codes = {
     211: "System Status",
     214: "Help",
@@ -42,13 +44,12 @@ response_codes = {
 }
 
 
-# based on RFC 821 - there are now more commands which need to be added
 # SEND, SOML, SAML, RELAY, TURN and TLS are obsolete
 
 # EXPN means Expand
 # NOOP is used to prevent timeout and ensure connection still present
+
 commands = (
-    # "CONNECTION ESTABLISHMENT",
     "HELO",
     "EHLO",
     "MAIL",

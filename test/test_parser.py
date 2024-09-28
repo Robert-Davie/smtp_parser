@@ -1,4 +1,6 @@
-from parser import SmtpParser
+"""unit tests"""
+
+from src.parser import SmtpParser
 import pytest
 
 
